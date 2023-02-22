@@ -4,15 +4,16 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import static ru.javaops.masterjava.matrix.MatrixUtil.MATRIX_SIZE;
+import static ru.javaops.masterjava.matrix.MatrixUtil.THREAD_NUMBER;
+
 /**
  * gkislin
  * 03.07.2016
  */
 public class MainMatrix {
-    private static final int MATRIX_SIZE = 1000;
-    private static final int THREAD_NUMBER = 10;
 
-    private final static ExecutorService executor = Executors.newFixedThreadPool(MainMatrix.THREAD_NUMBER);
+    private final static ExecutorService executor = Executors.newFixedThreadPool(THREAD_NUMBER);
 
     public static void main(String[] args) throws ExecutionException, InterruptedException {
         final int[][] matrixA = MatrixUtil.create(MATRIX_SIZE);
@@ -47,6 +48,6 @@ public class MainMatrix {
     }
 
     private static void out(String format, double ms) {
-        System.out.println(String.format(format, ms));
+        System.out.printf((format) + "%n", ms);
     }
 }
