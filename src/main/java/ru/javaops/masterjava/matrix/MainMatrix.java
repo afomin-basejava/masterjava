@@ -4,20 +4,25 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static ru.javaops.masterjava.matrix.MatrixUtil.MATRIX_SIZE;
-import static ru.javaops.masterjava.matrix.MatrixUtil.THREAD_NUMBER;
-
 /**
  * gkislin
  * 03.07.2016
  */
 public class MainMatrix {
+    static final int MATRIX_SIZE = 1000;
+    static final int THREAD_NUMBER = 10;
+    static final int NUMBER_OF_TASKS = 1;
+    static int[][] matrixA;
+    static int[][] matrixB;
 
     private final static ExecutorService executor = Executors.newFixedThreadPool(THREAD_NUMBER);
 
+    static{
+        matrixA = MatrixUtil.create(MATRIX_SIZE);
+        matrixB = MatrixUtil.create(MATRIX_SIZE);
+    }
+
     public static void main(String[] args) throws ExecutionException, InterruptedException {
-        final int[][] matrixA = MatrixUtil.create(MATRIX_SIZE);
-        final int[][] matrixB = MatrixUtil.create(MATRIX_SIZE);
 
         double singleThreadSum = 0.;
         double concurrentThreadSum = 0.;
@@ -35,6 +40,8 @@ public class MainMatrix {
             duration = (System.currentTimeMillis() - start) / 1000.;
             out("Concurrent thread time, sec: %.3f", duration);
             concurrentThreadSum += duration;
+
+            Thread.sleep(0, 1);
 
             if (!MatrixUtil.compare(matrixC, concurrentMatrixC)) {
                 System.err.println("Comparison failed");
