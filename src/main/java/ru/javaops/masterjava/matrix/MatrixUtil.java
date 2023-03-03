@@ -3,12 +3,9 @@ package ru.javaops.masterjava.matrix;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.*;
 
-import static ru.javaops.masterjava.matrix.MainMatrix.MATRIX_SIZE;
-import static ru.javaops.masterjava.matrix.MainMatrix.NUMBER_OF_TASKS;
+import static ru.javaops.masterjava.matrix.MainMatrix.*;
 
 /**
  * gkislin
@@ -17,31 +14,49 @@ import static ru.javaops.masterjava.matrix.MainMatrix.NUMBER_OF_TASKS;
 public class MatrixUtil {
 
     // T_O_D_O implement parallel multiplication matrixA*matrixB
-    public static int[][] concurrentMultiply(int[][] matrixA, int[][] matrixB, ExecutorService executor) throws InterruptedException, ExecutionException {
-        final int matrixSize = matrixA.length;
-        final int[][] matrixC = new int[matrixSize][matrixSize];
-/*
-        List<CallableTask> tasks = new ArrayList<>();
-        tasks.add(new Task(matrixA, matrixB, matrixC, i + n, j));
-        executor.invokeAll(tasks);
-*/
-        for (int i = 0; i < MATRIX_SIZE; i += NUMBER_OF_TASKS) {
-            for (int j = 0; j < MATRIX_SIZE; j++) {
-                for (int n = 0; i + n < MATRIX_SIZE && n < NUMBER_OF_TASKS; n++) {
-                    executor.submit(new Task(matrixA, matrixB, matrixC, i + n, j));
-                }
-            }
-
+    public static int[][] concurrentMultiply(int[][] matrixA, int[][] matrixB, ExecutorService executor) {
+        int[][] matrixC = new int[MATRIX_SIZE][MATRIX_SIZE];
+        for (int rowA = 0; rowA < MATRIX_SIZE; rowA += TASK_SIZE) {
+            executor.submit(new Task(matrixA, matrixB, matrixC, rowA));
         }
-        while (((ThreadPoolExecutor) executor).getQueue().size() > 0) ;
         return matrixC;
     }
 
-    // TODO optimize by https://habrahabr.ru/post/114797/
+    public static int[][] concurrentMultiplyCB(int[][] matrixA, int[][] matrixB, CyclicBarrier barrier) {
+        int[][] matrixC = new int[MATRIX_SIZE][MATRIX_SIZE];
+        List<Thread> threads = new ArrayList<>(THREAD_NUMBER);
+        for (int rowA = 0; rowA < MATRIX_SIZE; rowA++) {
+            threads.add(new TaskCB(matrixA, matrixB, matrixC, rowA, barrier));
+            if (threads.size() == THREAD_NUMBER) {
+                for (Thread thread : threads) {
+                    thread.start();
+                }
+                for (Thread thread : threads) {
+                    try {
+                        thread.join();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                threads.clear();
+            }
+        }
+        return matrixC;
+    }
+
+    private static int[][] matrixC = new int[MATRIX_SIZE][MATRIX_SIZE];
+
+    public static int[][] concurrentMultiplyFJP(int[][] matrixA, int[][] matrixB, ForkJoinPool fjp) {
+        int[][] matrixC = MatrixUtil.matrixC;
+        TaskFJP task = new TaskFJP(matrixC, 0, MATRIX_SIZE);
+        fjp.<Void>invoke(task);
+        return matrixC;
+    }
+    // T_O_D_O optimize by https://habrahabr.ru/post/114797/
+
     public static int[][] singleThreadMultiply(int[][] matrixA, int[][] matrixB) {
         final int matrixSize = matrixA.length;
         final int[][] matrixC = new int[matrixSize][matrixSize];
-        final int[][] matrixBTransponed = transpone(matrixB);
 
         int[] columnMatrixB = new int[MATRIX_SIZE];
         try {
@@ -69,7 +84,7 @@ public class MatrixUtil {
 
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                matrix[i][j] = rn.nextInt(10);
+                matrix[i][j] = rn.nextInt(6);
             }
         }
         return matrix;
@@ -80,12 +95,12 @@ public class MatrixUtil {
         for (int i = 0; i < matrixSize; i++) {
             for (int j = 0; j < matrixSize; j++) {
                 if (matrixA[i][j] != matrixB[i][j]) {
-                    System.out.printf("matrixA[%d][%d] = %d != matrixB[%d][%d] = %d", i, j, matrixA[i][j], i, j, matrixB[i][j]);
-                    return false;
+                    System.out.printf("matrix[%d][%d] = %d != concurrentMatrix[%d][%d] = %d", i, j, matrixA[i][j], i, j, matrixB[i][j]);
+                    return true;
                 }
             }
         }
-        return true;
+        return false;
     }
 
     public static int[][] transpone(int[][] matrix) {
@@ -98,30 +113,110 @@ public class MatrixUtil {
         return matrixTransponed;
     }
 
-    static class Task implements Runnable {
+    private static void calculate(int[][] matrixA, int[][] matrixB, int[][] matrixC, int rowA) {
+        int[] columnMatrixB = new int[MATRIX_SIZE];
+        for (int i = rowA; i < rowA + TASK_SIZE; ++i) {
+            calcIJ(matrixA, matrixB, matrixC, columnMatrixB, i);
+        }
+    }
+
+    private static void calculate(int[][] matrixA, int[][] matrixB, int[][] matrixC, int rowA, int r) {
+        int[] columnMatrixB = new int[MATRIX_SIZE];
+        for (int i = rowA; i < r; i++) {
+            calcIJ(matrixA, matrixB, matrixC, columnMatrixB, i);
+        }
+    }
+
+    private static void calculateCB(int[][] matrixA, int[][] matrixB, int[][] matrixC, int rowA) {
+        int[] columnMatrixB = new int[MATRIX_SIZE];
+        calcIJ(matrixA, matrixB, matrixC, columnMatrixB, rowA);
+    }
+
+    private static void calcIJ(int[][] matrixA, int[][] matrixB, int[][] matrixC, int[] columnMatrixB, int column) {
+        for (int k = 0; k < MATRIX_SIZE; k++) {
+            columnMatrixB[k] = matrixB[k][column];
+        }
+        for (int j = 0; j < MATRIX_SIZE; j++) {
+            int[] rowMatrixA = matrixA[j];
+            int sum = 0;
+            for (int k = 0; k < MATRIX_SIZE; k++) {
+                sum += rowMatrixA[k] * columnMatrixB[k];
+            }
+            matrixC[j][column] = sum;
+        }
+    }
+
+    private static class Task implements Runnable {
         private final int[][] matrixA;
         private final int[][] matrixB;
         private final int[][] matrixC;
-        private final int i;
-        private final int j;
 
-        public Task(int[][] matrixA, int[][] matrixB, int[][] matrixC, int i, int j) {
+        private final int rowA;
+
+        public Task(int[][] matrixA, int[][] matrixB, int[][] matrixC, int rowA) {
             this.matrixA = matrixA;
             this.matrixB = matrixB;
             this.matrixC = matrixC;
-            this.i = i;
-            this.j = j;
+            this.rowA = rowA;
         }
 
         @Override
         public void run() {
-//            System.out.printf("[%d][%d] Thread %20s started : %d%n", i, j, Thread.currentThread().getName(), System.nanoTime());
-            int sum = 0;
-            for (int k = 0; k < matrixA.length; k++) {
-                sum += matrixA[i][k] * matrixB[k][j];
+            calculate(matrixA, matrixB, matrixC, rowA);
+        }
+
+    }
+
+    private static class TaskCB extends Thread {
+        private final int[][] matrixA;
+        private final int[][] matrixB;
+        private final int[][] matrixC;
+        private final int rowA;
+
+        private final CyclicBarrier barrier;
+
+        public TaskCB(int[][] matrixA, int[][] matrixB, int[][] matrixC, int rowA, CyclicBarrier barrier) {
+            this.matrixA = matrixA;
+            this.matrixB = matrixB;
+            this.matrixC = matrixC;
+            this.rowA = rowA;
+            this.barrier = barrier;
+        }
+
+        @Override
+        public void run() {
+            try {
+                barrier.await();
+                calculateCB(matrixA, matrixB, matrixC, rowA);
+            } catch (InterruptedException | BrokenBarrierException e) {
+                e.printStackTrace();
             }
-            matrixC[i][j] = sum;
-//            System.out.printf("[%d][%d] Thread %20s finished: %d%n", i, j, Thread.currentThread().getName(), System.nanoTime());
+        }
+    }
+
+    private static class TaskFJP extends RecursiveAction {
+        private final int[][] matrixA = MainMatrix.matrixA;
+        private final int[][] matrixB = MainMatrix.matrixB;
+        private final int[][] matrixC;
+
+        final int lo, hi;
+
+        TaskFJP(int[][] matrixC, int lo, int hi) {
+            this.matrixC = matrixC;
+            this.lo = lo;
+            this.hi = hi;
+        }
+
+        protected void compute() {
+            if (hi - lo <= TASK_SIZE / 64) {
+                for (int i = lo; i < hi; i++) {
+                    calculate(matrixA, matrixB, matrixC, i, hi);
+                }
+            } else {
+                int mid = (lo + hi) >>> 1;
+                invokeAll(new TaskFJP(matrixC, lo, mid),
+                        new TaskFJP(matrixC, mid, hi));
+            }
         }
     }
 }
