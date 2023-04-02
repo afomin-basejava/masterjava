@@ -1,15 +1,17 @@
 package ru.javaops.masterjava.matrix;
 
 import java.util.concurrent.*;
+import java.util.stream.IntStream;
 
 /**
  * gkislin
  * 03.07.2016
  */
 public class MainMatrix {
-    static final int MATRIX_SIZE = 1000;
+    public static final int MATRIX_SIZE = 1000;
     static final int TASK_SIZE = 100;
-    static final int THREAD_NUMBER = 10;
+    public static final int THREAD_NUMBER = 10;
+    public static final int THRESH = 64;
     static int[][] matrixA;
     static int[][] matrixB;
 
@@ -23,6 +25,7 @@ public class MainMatrix {
         double concurrentThreadSum = 0.;
         double concurrentThreadSumCB = 0.;
         double concurrentThreadSumFJP = 0.;
+        double concurrentSumParallelStream = 0.;
         int count = 1;
         while (count < 6) {
             System.out.println("Pass " + count);
@@ -64,15 +67,27 @@ public class MainMatrix {
 
             ForkJoinPool fjp = new ForkJoinPool(THREAD_NUMBER);
             start = System.nanoTime();
-            final int[][] concurrentMatrixFJP = MatrixUtil.concurrentMultiplyFJP(matrixA, matrixB, fjp);
+            final int[][] concurrentMatrixFJP = MatrixUtil.concurrentMultiplyFJP(fjp);
             duration = (System.nanoTime() - start) / 1000000.;
             out("Concurrent ForkJoinPool thread time, msec: %,.3f", duration);
             concurrentThreadSumFJP += duration;
             fjp.shutdown();
-            while(!fjp.isTerminated());
+            while (!fjp.isTerminated()) ;
 
             if (MatrixUtil.compare(matrixC, concurrentMatrixFJP)) {
                 System.err.println("Comparison (ForkJoinPool) failed");
+                break;
+            }
+
+            IntStream stream = IntStream.rangeClosed(0, MATRIX_SIZE - 1).parallel().filter(n -> n % TASK_SIZE == 0);
+            start = System.nanoTime();
+            final int[][] concurrentMatrixParallelStream = MatrixUtil.concurrentMultiplyParallelStream(matrixA, matrixB, stream);
+            duration = (System.nanoTime() - start) / 1000000.;
+            out("Concurrent concurrentMatrixParralelStream time, msec: %,.3f", duration);
+            concurrentSumParallelStream += duration;
+
+            if (MatrixUtil.compare(matrixC, concurrentMatrixParallelStream)) {
+                System.err.println("Comparison (ParallelStream) failed");
                 break;
             }
 
@@ -82,9 +97,10 @@ public class MainMatrix {
         out("Average concurrent thread (executor) time, msec:  %,9.3f", concurrentThreadSum / 5.);
         out("Average concurrent thread (CB) time, msec:        %,9.3f", concurrentThreadSumCB / 5.);
         out("Average concurrent thread (ForkJoinPool) time, msec:        %,9.3f", concurrentThreadSumFJP / 5.);
+        out("Average concurrent thread (ParallelStream) time, msec:        %,9.3f", concurrentSumParallelStream / 5.);
     }
 
-    private static void out(String format, double ms) {
+    public static void out(String format, double ms) {
         System.out.printf((format) + "%n", ms);
     }
 }
