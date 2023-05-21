@@ -55,7 +55,6 @@ public class MainXml {
         XMLStreamReader parser = factory.createXMLStreamReader(is);
         Map<String, Set<String>> projectGroups = new HashMap<>();
         Map<String, Set<String>> userGroups = new HashMap<>();
-        WHILE_HAS_NEXT_UP:
         while (parser.hasNext()) {
             if (parser.next() == XMLStreamReader.START_ELEMENT) {
                 if (parser.getLocalName().equalsIgnoreCase("project")) {
@@ -65,31 +64,31 @@ public class MainXml {
                         INSIDE_GROUP:
                         while (parser.hasNext()) {
                             int eventType = parser.next();
-                            if (eventType == XMLStreamReader.START_ELEMENT) {
-                                if (parser.getLocalName().equalsIgnoreCase("group")) {
-                                    String groupName = parser.getAttributeValue(null, "name");
-                                    groups.add(groupName);
-                                }
-                            }
-                            if (eventType == XMLStreamReader.END_ELEMENT) {
-                                if (parser.getLocalName().equalsIgnoreCase("project")) {
-                                    break INSIDE_GROUP;
-                                }
+                            switch (eventType) {
+                                case XMLStreamReader.START_ELEMENT:
+                                    if (parser.getLocalName().equalsIgnoreCase("group")) {
+                                        groups.add(parser.getAttributeValue(null, "name"));
+                                    }
+                                    break;
+                                case XMLStreamReader.END_ELEMENT:
+                                    if (parser.getLocalName().equalsIgnoreCase("project")) {
+                                        break INSIDE_GROUP;
+                                    }
+                                    break;
                             }
                         }
                     }
                 }
                 if (parser.getLocalName().equalsIgnoreCase("user")) {
-                    String groups = parser.getAttributeValue(null, "userGroup");
+                    String groupsString = parser.getAttributeValue(null, "userGroup");
                     INSIDE_USER:
                     while (parser.hasNext()) {
                         int event = parser.next();
                         switch (event) {
                             case XMLStreamReader.START_ELEMENT:
-                                String elementText = parser.getElementText();
-                                if (groups != null && !groups.isEmpty()) {
-                                    Set<String> set = Arrays.stream(groups.split(" ")).collect(Collectors.toSet());
-                                    userGroups.put(elementText, set);
+                                String user = parser.getElementText();
+                                if (groupsString != null && !groupsString.isEmpty()) {
+                                    userGroups.put(user, Arrays.stream(groupsString.split(" ")).collect(Collectors.toSet()));
                                 }
                                 break;
                             case XMLStreamReader.END_ELEMENT:
@@ -99,9 +98,8 @@ public class MainXml {
                 }
             }
         }
-        Set<String> projectUsers = new TreeSet<>();
+        Set<String> projectUsers = new TreeSet<>(Comparator.comparing(String::toLowerCase));
         userGroups.forEach((name, groups) -> {
-            Collection<Set<String>> values = projectGroups.values();
             if (!Collections.disjoint(groups, projectGroups.values().stream().flatMap(Collection::stream).collect(Collectors.toSet()))) {
                 projectUsers.add(name);
             }
