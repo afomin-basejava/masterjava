@@ -4,6 +4,7 @@ import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 import javax.xml.stream.events.XMLEvent;
+import javax.xml.validation.Schema;
 import java.io.InputStream;
 
 public class StaxStreamProcessor implements AutoCloseable {
@@ -52,5 +53,8 @@ public class StaxStreamProcessor implements AutoCloseable {
                 // empty
             }
         }
+    }
+
+    public void setSchema(Schema ofClasspath) {
     }
 }

@@ -9,7 +9,7 @@ import java.io.StringWriter;
 import java.io.Writer;
 
 public class JaxbMarshaller {
-    private Marshaller marshaller;
+    private final Marshaller marshaller;
 
     public JaxbMarshaller(JAXBContext ctx) throws JAXBException {
         marshaller = ctx.createMarshaller();

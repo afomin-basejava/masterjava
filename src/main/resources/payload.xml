@@ -19,10 +19,13 @@
 <!--        1.3 сделать User.email аттрибутом.-->
 <!--        1.4 реализовать принадлежность участников разным группам (Admin состоит в группах topjava07, topjava08, masterjava01)-->
         <User flag="active" city="kiv" email="active@ru.ru" userGroup="topjava01">
-            <fullName>Full Name</fullName>
+            <fullName>full Name</fullName>
+        </User>
+        <User flag="active" city="kiv" email="active1@r" userGroup="topjava03">
+            <fullName>another User</fullName>
         </User>
         <User flag="superuser" city="spb" email="superuser@r.r" userGroup="topjava02 topjava03 masterjava01">
-            <fullName>Admin</fullName>
+            <fullName>Axmin</fullName>
         </User>
         <User flag="deleted" city="spb" email="deleted@y.y">
             <fullName>Deleted</fullName>

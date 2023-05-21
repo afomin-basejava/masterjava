@@ -7,6 +7,14 @@
     <xs:element name="Payload">
         <xs:complexType>
             <xs:all>
+                <!--    1.1 добавить проекты. Имеют название (например topjava, masterjava) и описание-->
+                <xs:element name="Projects">
+                    <xs:complexType>
+                        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                            <xs:element ref="Project"/>
+                        </xs:sequence>
+                    </xs:complexType>
+                </xs:element>
                 <xs:element name="Cities">
                     <xs:complexType>
                         <xs:sequence minOccurs="1" maxOccurs="unbounded">
@@ -28,11 +36,15 @@
     <xs:element name="User">
         <xs:complexType>
             <xs:sequence>
-                <xs:element type="xs:string" name="email"/>
                 <xs:element type="xs:string" name="fullName"/>
             </xs:sequence>
             <xs:attribute type="flagType" name="flag" use="required"/>
             <xs:attribute type="xs:IDREF" name="city" use="required"/>
+            <!--1.3 сделать User.email аттрибутом.-->
+            <!--https://github.com/metashare/META-SHARE/issues/527-->
+            <xs:attribute type="emailAddress" name="email"/>
+            <!--1.4 реализовать принадлежность участников разным группам (Admin состоит в группах topjava07, topjava08, masterjava01)-->
+            <xs:attribute type="xs:IDREFS" name="userGroup"/>
         </xs:complexType>
     </xs:element>
 
@@ -53,4 +65,40 @@
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
+
+    <!--1.1 добавить проекты. Имеют название (например topjava, masterjava) и описание-->
+    <xs:element name="Project">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element type="xs:string" name="description"/>
+                <xs:sequence minOccurs="1" maxOccurs="5">
+                    <!--1.2 добавить группы. Они имеют название и тип (REGISTERING/CURRENT/FINISHED) и принадлежат проекту.-->
+                    <xs:element name="Group">
+                        <xs:complexType>
+                            <!--1.4 реализовать принадлежность участников разным группам (Admin состоит в группах topjava07, topjava08, masterjava01)-->
+                            <xs:attribute type="xs:ID" name="name" use="required"/>
+                            <xs:attribute type="groupType" name="type" use="required"/>
+                        </xs:complexType>
+                    </xs:element>
+                </xs:sequence>
+            </xs:sequence>
+            <xs:attribute type="xs:string" name="name" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+    <xs:simpleType name="groupType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="REGISTERING"/>
+            <xs:enumeration value="CURRENT"/>
+            <xs:enumeration value="FINISHED"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!--https://github.com/metashare/META-SHARE/issues/527-->
+    <xs:simpleType name="emailAddress">
+        <xs:restriction base="xs:token">
+            <xs:maxLength value="254"/>
+            <xs:pattern value="[_\-a-zA-Z0-9\.\+]+@[a-zA-Z0-9](\.?[\-a-zA-Z0-9]*[a-zA-Z0-9])*"/>
+        </xs:restriction>
+    </xs:simpleType>
 </xs:schema>

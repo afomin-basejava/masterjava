@@ -4,3 +4,8 @@ target
 *.iml
 log
 lib
+patch
+.patch
+.zip
+.gitignor
+.pdf
