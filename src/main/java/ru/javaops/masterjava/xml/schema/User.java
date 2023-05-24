@@ -193,4 +193,16 @@ public class User {
         return this.userGroup;
     }
 
+    public void setUserGroup(List<Object> userGroup) {
+        this.userGroup = userGroup;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "fullName='" + fullName + '\'' +
+                ", email='" + email + '\'' +
+                ", userGroup=" + userGroup +
+                '}';
+    }
 }
