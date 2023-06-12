@@ -8,7 +8,7 @@ import org.thymeleaf.templateresolver.ServletContextTemplateResolver;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-public class UserProccessor {
+public class ThymeleafEngine {
     private static final TemplateEngine templateEngine = new TemplateEngine();
     private static final ServletContextTemplateResolver resolver = new ServletContextTemplateResolver();
     static {
