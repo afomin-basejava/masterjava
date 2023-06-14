@@ -1,0 +1,17 @@
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Exception</title>
+</head>
+<body>
+        <br>
+        <h4>Application Exception: </h4>
+        <!--/*@thymesVar id="exception" type="java.lang.Exception"*/-->
+        <h2 th:text="${exception.getMessage()}">exception.message</h2>
+        <p>File : <span th:text="${file}">File is not selected</span></p>
+        <ul>
+            <li th:each="item:${exception.stackTrace}" th:text="${item}"></li>
+        </ul>
+
+</body>
+</html>

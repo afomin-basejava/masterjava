@@ -39,7 +39,7 @@ public class UserServlet extends HttpServlet {
         ThymeleafEngine.process(response, "upload", ctx);
     }
 
-    public void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException {
+    public void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         final WebContext ctx = new WebContext(request, response, request.getServletContext(), request.getLocale());
 //        Collection<Part> parts = request.getParts();
 //        for (Part part : parts) {
@@ -60,10 +60,19 @@ public class UserServlet extends HttpServlet {
 //            System.out.println("===============================================");
 //        }
 //        List<User> users = getUsersByStax(request);
-        List<User> users = getUsersByStaxJaxb(request);
-        ctx.setVariable("users", users);
-        ctx.setVariable("file", request.getPart("file").getSubmittedFileName());
-        ThymeleafEngine.process(response, "users", ctx);
+        List<User> users = null;
+        try {
+            users = getUsersByStaxJaxb(request);
+            ctx.setVariable("users", users);
+            ctx.setVariable("file", request.getPart("file").getSubmittedFileName());
+            ThymeleafEngine.process(response, "users", ctx);
+        } catch (ServletException | IOException | XMLStreamException | JAXBException e) {
+            ctx.setVariable("exception", e);
+            String fileName = request.getPart("file").getSubmittedFileName();
+            ctx.setVariable("file", "".equals(fileName) ? "File is not selected" : fileName);
+            ThymeleafEngine.process(response, "exception", ctx);
+            e.printStackTrace();
+        }
     }
 
     private List<User> getUsersByStax(HttpServletRequest request) throws IOException, ServletException {
@@ -79,13 +88,13 @@ public class UserServlet extends HttpServlet {
 //            reader.close();
             }
         } catch (XMLStreamException e) {
-            LOGGER.log(Level.INFO, "No users: " + request.getPart("file").getSubmittedFileName());
+            LOGGER.log(Level.INFO, "Error while reading file: " + request.getPart("file").getSubmittedFileName());
             e.printStackTrace();
         }
         return users;
     }
 
-    private List<User> getUsersByStaxJaxb(HttpServletRequest request) throws IOException, ServletException {
+    private List<User> getUsersByStaxJaxb(HttpServletRequest request) throws ServletException, IOException, XMLStreamException, JAXBException {
         JaxbParser jaxbParser = new JaxbParser(ObjectFactory.class);
         List<User> users = new ArrayList<>();
         try (InputStream inputStream = request.getPart("file").getInputStream();
@@ -100,9 +109,6 @@ public class UserServlet extends HttpServlet {
                         UserFlag.valueOf(xmlUser.getValue().getFlag().value())));
 //            reader.close();
             }
-        } catch (XMLStreamException | JAXBException e) {
-            LOGGER.log(Level.INFO, "No users: " + request.getPart("file").getSubmittedFileName());
-            e.printStackTrace();
         }
         return users;
     }
