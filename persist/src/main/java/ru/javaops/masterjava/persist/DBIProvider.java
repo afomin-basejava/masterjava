@@ -24,11 +24,13 @@ public class DBIProvider {
             if (connectionFactory != null) {
                 log.info("Init jDBI with  connectionFactory");
                 dbi = new DBI(connectionFactory);
+                log.info("Init jDBI with  connectionFactory {} {}",dbi,connectionFactory);
             } else {
                 try {
                     log.info("Init jDBI with  JNDI");
                     InitialContext ctx = new InitialContext();
                     dbi = new DBI((DataSource) ctx.lookup("java:/comp/env/jdbc/masterjava"));
+                    log.info("Init jDBI with  JNDI {}", dbi);
                 } catch (Exception ex) {
                     throw new IllegalStateException("PostgreSQL initialization failed", ex);
                 }

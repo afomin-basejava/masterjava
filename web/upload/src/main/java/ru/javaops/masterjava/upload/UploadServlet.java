@@ -16,7 +16,7 @@ import java.util.List;
 
 import static ru.javaops.masterjava.common.web.ThymeleafListener.engine;
 
-@WebServlet(urlPatterns = "/", loadOnStartup = 1)
+@WebServlet(urlPatterns = "/upload", loadOnStartup = 1)
 @MultipartConfig(fileSizeThreshold = 1024 * 1024 * 10) //10 MB in memory limit
 public class UploadServlet extends HttpServlet {
 
@@ -34,12 +34,13 @@ public class UploadServlet extends HttpServlet {
 
         try {
 //            http://docs.oracle.com/javaee/6/tutorial/doc/glraq.html
+            int chunkSize = Integer.parseInt(req.getParameter("chunkSize"));
             Part filePart = req.getPart("fileToUpload");
             if (filePart.getSize() == 0) {
                 throw new IllegalStateException("Upload file have not been selected");
             }
             try (InputStream is = filePart.getInputStream()) {
-                List<User> users = userProcessor.process(is);
+                List<User> users = userProcessor.process(is, chunkSize);
                 webContext.setVariable("users", users);
                 engine.process("result", webContext, resp.getWriter());
             }
