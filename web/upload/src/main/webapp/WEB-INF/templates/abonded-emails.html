@@ -1,0 +1,24 @@
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Abonded Emails</title>
+</head>
+<body>
+<h4><a href="">Upload XML</a></h4>
+<h3>Abonded Emails</h3>
+<table border="1" cellpadding="8" cellspacing="0">
+    <thead>
+    <tr>
+        <th>Emails</th>
+        <th>Reason</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="abandonedEmail : ${abandonedEmails}">
+        <td th:text="${abandonedEmail.getEmails()}"></td>
+        <td th:utext="${abandonedEmail.getReason()}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

@@ -1,7 +1,6 @@
 package ru.javaops.masterjava.upload;
 
 import org.thymeleaf.context.WebContext;
-import ru.javaops.masterjava.persist.model.User;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.MultipartConfig;
@@ -16,9 +15,9 @@ import java.util.List;
 
 import static ru.javaops.masterjava.common.web.ThymeleafListener.engine;
 
-@WebServlet(urlPatterns = "/", loadOnStartup = 1)
+@WebServlet(urlPatterns = "/chunk", loadOnStartup = 1)
 @MultipartConfig(fileSizeThreshold = 1024 * 1024 * 10) //10 MB in memory limit
-public class UploadServlet extends HttpServlet {
+public class UploadChunkServlet extends HttpServlet {
 
     private final UserProcessor userProcessor = new UserProcessor();
 
@@ -40,9 +39,9 @@ public class UploadServlet extends HttpServlet {
                 throw new IllegalStateException("Upload file have not been selected");
             }
             try (InputStream is = filePart.getInputStream()) {
-                List<User> users = userProcessor.process(is, chunkSize);
-                webContext.setVariable("users", users);
-                engine.process("result", webContext, resp.getWriter());
+                List<UserProcessor.AbandonedEmails> abandonedEmails = userProcessor.processChunk(is, chunkSize);
+                webContext.setVariable("abandonedEmails", abandonedEmails);
+                engine.process("abonded-emails", webContext, resp.getWriter());
             }
         } catch (Exception e) {
             webContext.setVariable("exception", e);

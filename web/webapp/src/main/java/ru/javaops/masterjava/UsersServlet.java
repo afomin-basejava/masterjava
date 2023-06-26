@@ -15,7 +15,7 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.List;
 
-@WebServlet(urlPatterns = "/users", loadOnStartup = 1)
+@WebServlet(urlPatterns = "/", loadOnStartup = 1)
 public class UsersServlet extends HttpServlet {
     UserDao userDao = DBIProvider.getDao(UserDao.class);
 
