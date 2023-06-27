@@ -95,6 +95,7 @@ public class UserProcessor {
             }
         }
         extractAbandonedEmails(chunk, executor, abandonedEmails);
+        executor.shutdown();
         return abandonedEmails.stream()
                 .collect(Collectors.groupingBy(AbandonedEmails::getReason)).entrySet().stream()
                 .map(entry -> new AbandonedEmails(entry.getValue().stream()
