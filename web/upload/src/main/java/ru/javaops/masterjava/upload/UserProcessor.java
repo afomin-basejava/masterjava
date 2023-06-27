@@ -15,6 +15,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.events.XMLEvent;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
@@ -73,12 +74,38 @@ public class UserProcessor {
             }
         }
         extractAbandonedEmails(chunk, executor, abandonedEmails);
+        executor.shutdown();
         return abandonedEmails;
     }
 
+    public List<AbandonedEmails> processChunkGroupedByReason(final InputStream is, int chunkSize) throws XMLStreamException, JAXBException {
+        final StaxStreamProcessor processor = new StaxStreamProcessor(is);
+        final JaxbUnmarshaller unmarshaller = jaxbParser.createUnmarshaller();
+        final ExecutorService executor = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+        List<User> chunk = new ArrayList<>();
+        List<AbandonedEmails> abandonedEmails = new ArrayList<>();
+
+        while (processor.doUntil(XMLEvent.START_ELEMENT, "User")) {
+            ru.javaops.masterjava.xml.schema.User xmlUser = unmarshaller.unmarshal(processor.getReader(), ru.javaops.masterjava.xml.schema.User.class);
+            final User user = new User(xmlUser.getValue(), xmlUser.getEmail(), UserFlag.valueOf(xmlUser.getFlag().value()));
+            chunk.add(user);
+            if (chunk.size() >= chunkSize) {
+                extractAbandonedEmails(chunk, executor, abandonedEmails);
+                chunk = new ArrayList<>();
+            }
+        }
+        extractAbandonedEmails(chunk, executor, abandonedEmails);
+        return abandonedEmails.stream()
+                .collect(Collectors.groupingBy(AbandonedEmails::getReason)).entrySet().stream()
+                .map(entry -> new AbandonedEmails(entry.getValue().stream()
+                        .map(AbandonedEmails::getEmails)
+                        .flatMap(Collection::stream)
+                        .collect(Collectors.toList()), entry.getKey()))
+                .collect(Collectors.toList());
+    }
+
     private void extractAbandonedEmails(List<User> finalChunk, ExecutorService executor, List<AbandonedEmails> abandonedEmails) {
-        CompletableFuture<AbandonedEmails> future
-                = CompletableFuture.supplyAsync(() -> insertChunk(finalChunk), executor)
+        CompletableFuture<AbandonedEmails> future = CompletableFuture.supplyAsync(() -> insertChunk(finalChunk), executor)
                 .handle((res, ex) -> {
                     if (null != ex) {
                         logger.debug("Failed to insert chunk -> CompletableFuture<AbandonedEmails>");
@@ -98,7 +125,6 @@ public class UserProcessor {
             }
         } catch (Exception ex) {
             logger.debug("Failed to insert chunk -> CompletableFuture#get {}", ex.getMessage());
-            abandonedEmails.clear();
             List<String> emailRange = new ArrayList<>();
             emailRange.add(String.format("%s -range- %s", finalChunk.get(0).getEmail(), finalChunk.get(finalChunk.size() - 1).getEmail()));
             abandonedEmails.add(new AbandonedEmails(emailRange, ex.getMessage()));
@@ -108,7 +134,7 @@ public class UserProcessor {
     private AbandonedEmails insertChunk(List<User> chunk) {
         for (User user : chunk) {
             if (user.getFullName().equals("User3")) {
-                throw new RuntimeException("insertChunk exception");
+                throw new RuntimeException("insertChunk userDao.insertBatch exception");
             }
         }
         int[] ints = userDao.insertBatch(chunk, chunk.size());

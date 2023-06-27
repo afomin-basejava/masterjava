@@ -39,7 +39,7 @@ public class UploadChunkServlet extends HttpServlet {
                 throw new IllegalStateException("Upload file have not been selected");
             }
             try (InputStream is = filePart.getInputStream()) {
-                List<UserProcessor.AbandonedEmails> abandonedEmails = userProcessor.processChunk(is, chunkSize);
+                List<UserProcessor.AbandonedEmails> abandonedEmails = userProcessor.processChunkGroupedByReason(is, chunkSize);
                 webContext.setVariable("abandonedEmails", abandonedEmails);
                 engine.process("abonded-emails", webContext, resp.getWriter());
             }
