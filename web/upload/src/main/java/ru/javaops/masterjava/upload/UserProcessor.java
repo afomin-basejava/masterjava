@@ -69,11 +69,11 @@ public class UserProcessor {
             final User user = new User(xmlUser.getValue(), xmlUser.getEmail(), UserFlag.valueOf(xmlUser.getFlag().value()));
             chunk.add(user);
             if (chunk.size() >= chunkSize) {
-                extractAbandonedEmails(chunk, executor, abandonedEmails);
+                abandonedEmails.addAll(extractAbandonedEmails(chunk, executor));
                 chunk = new ArrayList<>();
             }
         }
-        extractAbandonedEmails(chunk, executor, abandonedEmails);
+        abandonedEmails.addAll(extractAbandonedEmails(chunk, executor));
         executor.shutdown();
         return abandonedEmails;
     }
@@ -90,11 +90,11 @@ public class UserProcessor {
             final User user = new User(xmlUser.getValue(), xmlUser.getEmail(), UserFlag.valueOf(xmlUser.getFlag().value()));
             chunk.add(user);
             if (chunk.size() >= chunkSize) {
-                extractAbandonedEmails(chunk, executor, abandonedEmails);
+                abandonedEmails.addAll(extractAbandonedEmails(chunk, executor));
                 chunk = new ArrayList<>();
             }
         }
-        extractAbandonedEmails(chunk, executor, abandonedEmails);
+        abandonedEmails.addAll(extractAbandonedEmails(chunk, executor));
         executor.shutdown();
         return abandonedEmails.stream()
                 .collect(Collectors.groupingBy(AbandonedEmails::getReason)).entrySet().stream()
@@ -105,7 +105,8 @@ public class UserProcessor {
                 .collect(Collectors.toList());
     }
 
-    private void extractAbandonedEmails(List<User> finalChunk, ExecutorService executor, List<AbandonedEmails> abandonedEmails) {
+    private List<AbandonedEmails> extractAbandonedEmails(List<User> finalChunk, ExecutorService executor) {
+        List<AbandonedEmails> abandonedEmailsList = new ArrayList<>();
         CompletableFuture<AbandonedEmails> future = CompletableFuture.supplyAsync(() -> insertChunk(finalChunk), executor)
                 .handle((res, ex) -> {
                     if (null != ex) {
@@ -122,14 +123,15 @@ public class UserProcessor {
                 if (abandons.getEmails().contains("user1@gmail.com")) {
                     throw new RuntimeException("CompletableFuture#get exception");
                 }
-                abandonedEmails.add(abandons);
+                abandonedEmailsList.add(abandons);
             }
         } catch (Exception ex) {
             logger.debug("Failed to insert chunk -> CompletableFuture#get {}", ex.getMessage());
             List<String> emailRange = new ArrayList<>();
             emailRange.add(String.format("%s -range- %s", finalChunk.get(0).getEmail(), finalChunk.get(finalChunk.size() - 1).getEmail()));
-            abandonedEmails.add(new AbandonedEmails(emailRange, ex.getMessage()));
+            abandonedEmailsList.add(new AbandonedEmails(emailRange, ex.getMessage()));
         }
+        return abandonedEmailsList;
     }
 
     private AbandonedEmails insertChunk(List<User> chunk) {
